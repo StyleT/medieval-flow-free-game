@@ -1,0 +1,114 @@
+.board {
+  --bars-h: calc(13rem + var(--dock));
+  display: block;
+  width: min(calc(100% - 6 * var(--px)), calc((100dvh - var(--bars-h)) * var(--cols) / var(--rows)), 560px);
+  aspect-ratio: calc(var(--cols) / var(--rows));
+  margin-inline: auto;
+  background: var(--board-bg);
+  border: calc(2 * var(--px)) solid #14101f;
+  box-sizing: content-box;
+  image-rendering: pixelated;
+  box-shadow: 0 0 0 var(--px) #5a5f78;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.board-grid {
+  fill: none;
+  stroke: var(--grid-line);
+  stroke-width: 0.03;
+}
+
+.board-pipe {
+  fill: none;
+  stroke-width: var(--pipe-width);
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  shape-rendering: crispEdges;
+  pointer-events: none;
+}
+.board-pipe--rim {
+  stroke: #fff4dc;
+  stroke-opacity: 0.55;
+  stroke-width: calc(var(--pipe-width) + 0.2);
+}
+.board-pipe--outline {
+  stroke: color-mix(in oklab, var(--c), black 60%);
+  stroke-width: calc(var(--pipe-width) + 0.1);
+}
+.board-pipe--shine {
+  stroke: color-mix(in oklab, var(--c), white 45%);
+  stroke-width: 0.07;
+}
+
+.board-halo {
+  opacity: var(--halo-opacity);
+  pointer-events: none;
+}
+
+.board-cell,
+.board-block,
+.board-gem,
+.board-sparkle {
+  pointer-events: none;
+}
+.board-gem,
+.board-block {
+  image-rendering: pixelated;
+}
+.board-sparkle-strip {
+  image-rendering: pixelated;
+  animation: sparkle-steps 0.42s steps(5) forwards;
+}
+@keyframes sparkle-steps {
+  to {
+    transform: translateX(-80px);
+  }
+}
+
+.board-pipe--glow {
+  animation: pipe-glow 0.6s ease-out;
+}
+@keyframes pipe-glow {
+  0% {
+    filter: drop-shadow(0 0 0.12px #fff);
+  }
+  40% {
+    filter: drop-shadow(0 0 0.3px #fff);
+  }
+}
+
+.board--solved .board-pipe--main {
+  animation: board-glint 1.6s steps(8) 1;
+}
+@keyframes board-glint {
+  50% {
+    stroke: color-mix(in oklab, var(--c), #ffe9a0 60%);
+  }
+}
+
+@keyframes star-pop {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.star-pop {
+  animation: star-pop 0.35s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board--solved .board-pipe--main,
+  .board-pipe--glow,
+  .board-sparkle-strip,
+  .star-pop {
+    animation: none;
+  }
+}

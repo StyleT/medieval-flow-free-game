@@ -1,0 +1,468 @@
+{
+ "frames": {
+  "gem_A": {
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_B": {
+   "frame": {
+    "x": 24,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_C": {
+   "frame": {
+    "x": 48,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_D": {
+   "frame": {
+    "x": 72,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_E": {
+   "frame": {
+    "x": 96,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_F": {
+   "frame": {
+    "x": 120,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_G": {
+   "frame": {
+    "x": 144,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_H": {
+   "frame": {
+    "x": 168,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_I": {
+   "frame": {
+    "x": 0,
+    "y": 22,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_J": {
+   "frame": {
+    "x": 24,
+    "y": 22,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_K": {
+   "frame": {
+    "x": 48,
+    "y": 22,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_L": {
+   "frame": {
+    "x": 72,
+    "y": 22,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_M": {
+   "frame": {
+    "x": 96,
+    "y": 22,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_N": {
+   "frame": {
+    "x": 120,
+    "y": 22,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_O": {
+   "frame": {
+    "x": 144,
+    "y": 22,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_P": {
+   "frame": {
+    "x": 168,
+    "y": 22,
+    "w": 22,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 20
+   }
+  },
+  "gem_shine_0": {
+   "frame": {
+    "x": 0,
+    "y": 44,
+    "w": 24,
+    "h": 24
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 24
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 24
+   },
+   "duration": 100
+  },
+  "gem_shine_1": {
+   "frame": {
+    "x": 26,
+    "y": 44,
+    "w": 24,
+    "h": 24
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 24
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 24
+   },
+   "duration": 100
+  },
+  "gem_shine_2": {
+   "frame": {
+    "x": 52,
+    "y": 44,
+    "w": 24,
+    "h": 24
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 24
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 24
+   },
+   "duration": 100
+  },
+  "gem_shine_3": {
+   "frame": {
+    "x": 78,
+    "y": 44,
+    "w": 24,
+    "h": 24
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 24
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 24
+   },
+   "duration": 100
+  },
+  "gem_shine_4": {
+   "frame": {
+    "x": 104,
+    "y": 44,
+    "w": 24,
+    "h": 24
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 24
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 24
+   },
+   "duration": 100
+  },
+  "gem_shine_5": {
+   "frame": {
+    "x": 130,
+    "y": 44,
+    "w": 24,
+    "h": 24
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 24
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 24
+   },
+   "duration": 100
+  }
+ },
+ "meta": {
+  "app": "pxl",
+  "image": "gems.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 190,
+   "h": 68
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "gem_shine",
+    "from": 16,
+    "to": 21,
+    "direction": "forward"
+   }
+  ]
+ }
+}

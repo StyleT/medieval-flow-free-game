@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env*
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+.stryker-tmp/
+reports/
+scripts/.cache/
+.claude/skills/pxl-pixel-art
+art/out/

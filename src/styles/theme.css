@@ -1,0 +1,36 @@
+:root {
+  --flow-A: #e2333c;
+  --flow-B: #1f9e57;
+  --flow-C: #346fff;
+  --flow-D: #ffd21a;
+  --flow-E: #ff8a1e;
+  --flow-F: #22d3e0;
+  --flow-G: #ff4fc3;
+  --flow-H: #d8405b;
+  --flow-I: #9754e4;
+  --flow-J: #eef0f6;
+  --flow-K: #8a90a0;
+  --flow-L: #a6e82a;
+  --flow-M: #c89a5c;
+  --flow-N: #5f71d4;
+  --flow-O: #17877e;
+  --flow-P: #ff9bb8;
+
+  --px: 3px; /* one art pixel; main.tsx sets it to a whole number of device pixels */
+  --board-bg: transparent;
+  --grid-line: rgba(20, 16, 31, 0.35);
+  --pipe-width: 0.32;
+  --endpoint-r: 0.34;
+  --cell-fill-opacity: 0.22;
+  --halo-opacity: 0.25;
+
+  --surface: #1c1830;
+  --surface-2: #3a2a1e;
+  --text: #fff4dc;
+  --muted: #e6d6b0;
+  --muted-ink: #4a2f18;
+  --text-shadow: 1px 1px 0 #14101f;
+  --accent: #e8b43a;
+  --star: #f4c542;
+  --danger: #b3262e;
+}

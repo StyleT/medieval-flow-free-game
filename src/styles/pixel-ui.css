@@ -1,0 +1,351 @@
+/* Pixel UI: 9-slice frames from public/art. One art pixel = var(--px) (whole device pixels, set in main.tsx).
+   Vite prefixes absolute public urls with the configured base. */
+.px-panel,
+.px-panel-dark,
+.px-btn,
+.px-banner {
+  border-style: solid;
+  border-color: transparent;
+  image-rendering: pixelated;
+}
+
+.px-panel {
+  border-width: calc(8 * var(--px));
+  border-image: url(/art/sprites/panel.png) 8 fill / calc(8 * var(--px)) / 0 round;
+  color: #2a1a10;
+  --text: #2a1a10;
+  --muted: var(--muted-ink);
+  /* Tailwind's text-muted / text-star read --color-*, already resolved at :root, so override those too. */
+  --color-muted: var(--muted-ink);
+  --color-text: #2a1a10;
+  --color-star: #6b3f00;
+}
+
+.px-panel-dark {
+  border-width: calc(8 * var(--px));
+  border-image: url(/art/sprites/panel_dark.png) 8 fill / calc(8 * var(--px)) / 0 round;
+}
+
+.px-banner {
+  text-shadow: var(--text-shadow);
+  border-width: calc(6 * var(--px));
+  border-image: url(/art/sprites/banner.png) 6 fill / calc(6 * var(--px)) / 0 round;
+}
+
+.px-btn {
+  flex: none;
+  white-space: nowrap;
+  border-width: calc(6 * var(--px));
+  border-image: url(/art/sprites/btn.png) 6 fill / calc(6 * var(--px)) / 0 round;
+  padding: 0 calc(2 * var(--px));
+  color: var(--text);
+  cursor: pointer;
+}
+.px-btn:active:not(:disabled) {
+  border-image-source: url(/art/sprites/btn_down.png);
+  transform: translateY(var(--px));
+}
+.px-btn--gold {
+  border-image-source: url(/art/sprites/btn_gold.png);
+  color: #2a1a10;
+  font-weight: 700;
+}
+.px-btn--gold:active:not(:disabled) {
+  border-image-source: url(/art/sprites/btn_gold_down.png);
+}
+.px-btn--danger {
+  filter: hue-rotate(-30deg) saturate(1.6);
+}
+.px-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.px-btn[aria-checked='true'] {
+  border-image-source: url(/art/sprites/btn_gold.png);
+  color: #2a1a10;
+  font-weight: 700;
+}
+
+.px-btn:focus-visible,
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.px-icon {
+  display: inline-block;
+  vertical-align: middle;
+  image-rendering: pixelated;
+  flex: none;
+}
+
+.px-sprite {
+  display: inline-block;
+  flex: none;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  animation: px-steps var(--dur, 0.5s) steps(var(--frames)) var(--iter, infinite);
+}
+@keyframes px-steps {
+  to {
+    background-position-x: calc(var(--frames) * var(--fw) * var(--px) * -1);
+  }
+}
+
+/* One-shot strips stop on their last frame instead of running off the end. */
+@keyframes px-steps-once {
+  to {
+    background-position-x: calc((var(--frames) - 1) * var(--fw) * var(--px) * -1);
+  }
+}
+
+.sr-only-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .px-sprite {
+    animation: none;
+  }
+}
+
+/* Scene backdrop. The box is 320×180 scene pixels, scaled by an integer in JS. */
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--surface);
+}
+.scene--dim {
+  filter: brightness(0.6);
+}
+.scene-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+}
+.scene-art,
+.scene-clouds,
+.scene-sprite {
+  image-rendering: pixelated;
+}
+.scene-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.scene-clouds {
+  position: absolute;
+  left: 0;
+  width: 320px;
+  height: 40px;
+  background-repeat: repeat-x;
+  opacity: 0.55;
+  animation: scene-drift 60s linear infinite;
+}
+@keyframes scene-drift {
+  to {
+    background-position-x: -320px;
+  }
+}
+.scene-sprite {
+  position: absolute;
+  background-repeat: no-repeat;
+  animation: scene-frames var(--dur) steps(var(--frames)) infinite;
+}
+@keyframes scene-frames {
+  to {
+    background-position-x: calc(var(--frames) * var(--fw) * -1px);
+  }
+}
+.scene--paused .scene-clouds,
+.scene--paused .scene-sprite {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-clouds,
+  .scene-sprite {
+    animation: none;
+  }
+}
+
+/* Level map */
+.level-map {
+  position: relative;
+  image-rendering: pixelated;
+  border: var(--px) solid #5a3d24;
+  box-sizing: content-box;
+}
+.level-map-road {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.level-map-decor {
+  position: absolute;
+  pointer-events: none;
+}
+.level-map-nodes {
+  position: absolute;
+  inset: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.level-map-node {
+  position: absolute;
+}
+.level-map-btn {
+  display: block;
+  background: none;
+  border: 0;
+  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+  color: #2a1a10;
+}
+.level-map-btn:disabled {
+  cursor: not-allowed;
+}
+.level-map-plate {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + var(--px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--px);
+  min-width: calc(38 * var(--px));
+  padding: calc(2 * var(--px)) calc(3 * var(--px));
+  background: #f1dcae;
+  border: var(--px) solid #3a2414;
+  box-shadow: 0 var(--px) 0 #3a2414;
+  color: #2a1a10;
+  white-space: nowrap;
+}
+.level-map-bob {
+  animation-name: px-steps, level-bob;
+  animation-duration: var(--dur), 1s;
+  animation-timing-function: steps(var(--frames)), steps(2);
+  animation-iteration-count: infinite;
+}
+@keyframes level-bob {
+  50% {
+    transform: translateY(calc(-1 * var(--px)));
+  }
+}
+.level-map-stats {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 24 * var(--px));
+  transform: translateX(-50%);
+  font-size: 0.875rem;
+  padding: 0 calc(2 * var(--px));
+}
+@media (prefers-reduced-motion: reduce) {
+  .level-map-bob {
+    animation: none;
+  }
+}
+.level-map-caption {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 700;
+  text-align: center;
+  color: #2a1a10;
+}
+
+/* Solve celebration */
+.treasure {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  height: calc(32 * var(--px));
+}
+.treasure-chest {
+  --frames: 6;
+}
+.treasure-coin {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  opacity: 0;
+  animation: coin-fly 1.1s cubic-bezier(0.2, 0.7, 0.4, 1) both;
+}
+@keyframes coin-fly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) rotate(0);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--dx) * 0.8), var(--dy)) rotate(calc(var(--spin) * 180deg));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(var(--dy) + 90px)) rotate(calc(var(--spin) * 360deg));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .treasure-coin {
+    display: none;
+  }
+  .treasure-chest {
+    background-position-x: calc(-5 * 32 * var(--px));
+  }
+}
+
+/* Sound control: floating bottom-right on phones, top-right from sm (640px) up. */
+.sound-toggle {
+  position: fixed;
+  z-index: 20;
+  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+.sound-toggle-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+.sound-toggle-menu {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 0.5rem;
+  width: 14rem;
+  max-width: calc(100vw - 1.5rem);
+}
+@media (min-width: 640px) {
+  .sound-toggle {
+    bottom: auto;
+    top: max(0.75rem, env(safe-area-inset-top));
+  }
+  .sound-toggle-menu {
+    bottom: auto;
+    top: 100%;
+    margin-bottom: 0;
+    margin-top: 0.5rem;
+  }
+}
+
+/* Space under page content so the floating sound button never covers it (phones only). */
+:root {
+  --dock: 5.5rem;
+}
+@media (min-width: 640px) {
+  :root {
+    --dock: 0rem;
+  }
+}
