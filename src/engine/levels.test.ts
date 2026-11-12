@@ -35,6 +35,15 @@ describe('parseLevel', () => {
   it('throws on a branching color', () => {
     expect(() => parseLevel(meta, ['BAB', 'AAA', 'BAB'])).toThrow()
   })
+  it('sorts colors alphabetically, not by first appearance', () => {
+    const level = parseLevel(meta, ['CBA', 'CBA'])
+    expect(level.pairs.map((p) => p.color)).toEqual(['A', 'B', 'C'])
+    expect(Object.keys(level.solution).sort()).toEqual(['A', 'B', 'C'])
+  })
+  it('throws on a color with two ends and a branching cell', () => {
+    // two tails hanging off a 2x2 block: exactly 2 ends, but (1,0) and (2,0) have 3 same-color neighbours
+    expect(() => parseLevel(meta, ['A#', 'AA', 'AA', 'A#'])).toThrow('color A branches')
+  })
   it('throws on a loop', () => {
     expect(() => parseLevel(meta, ['AA', 'AA'])).toThrow(/exactly 2 ends/)
   })
@@ -66,6 +75,10 @@ describe('toGrid / flowsFor', () => {
 })
 
 describe('LEVELS', () => {
+  it('keeps the id and name of each data entry', () => {
+    expect(LEVELS.map((l) => [l.id, l.name])).toEqual(LEVEL_DATA.map((d) => [d.id, d.name]))
+    expect(LEVELS[0]).toMatchObject({ id: 'level-1', name: 'Level 1' })
+  })
   it('has 15 levels with strictly increasing area and non-decreasing flows up to 16', () => {
     expect(LEVELS).toHaveLength(15)
     for (let i = 1; i < LEVELS.length; i++) {

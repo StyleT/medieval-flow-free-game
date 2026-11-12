@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { generateLevel, mergeRuns, splitRuns, tooTrivial, touchesItself, validSplits } from './generator.ts'
+import {
+  generateLevel,
+  mergeRuns,
+  packSnakes,
+  shapeFlows,
+  splitRuns,
+  tooTrivial,
+  touchesItself,
+  validSplits,
+} from './generator.ts'
+import { mulberry32 } from './rng.ts'
 import { neighborTable } from './grid.ts'
 import { parseLevel, toGrid } from './levels.ts'
 import { solve } from './solver.ts'
@@ -64,6 +74,76 @@ describe('generateLevel (open mode, default)', () => {
   })
 })
 
+/**
+ * The generator is deterministic per seed, and the committed levels.data.ts was produced by it, so
+ * the exact output for a seed is a contract: a change here means regenerating the shipped levels.
+ */
+describe('generateLevel reproducibility (golden output)', () => {
+  it('open mode, 5×5 with 4 flows, seed 1', () => {
+    expect(toGrid(generateLevel(opts))).toEqual(['AAAAA', 'BBBBB', 'CCCDC', 'CDDDC', 'CCCCC'])
+  })
+  it('open mode, 6×6 with 5 flows, seed 7', () => {
+    expect(toGrid(generateLevel({ ...opts, rows: 6, cols: 6, flows: 5, seed: 7 }))).toEqual([
+      'ABCCCC',
+      'ABDBBC',
+      'ABDDBC',
+      'ABBBBC',
+      'AAAAAC',
+      'EEEEAC',
+    ])
+  })
+  it('unique mode, 5×5 with 4 flows, seed 1', () => {
+    expect(toGrid(generateLevel(unique))).toEqual(['AAABB', 'ACCBD', 'ADCBD', 'ADCCD', 'ADDDD'])
+  })
+  it('packSnakes never produces a snake that touches itself (R16)', () => {
+    for (const size of [4, 5, 6]) {
+      const near = neighborTable(size, size)
+      const mark = new Int32Array(size * size)
+      let stamp = 0
+      for (let seed = 1; seed <= 300; seed++) {
+        for (const snake of packSnakes(size, size, 4, mulberry32(seed))) {
+          expect(touchesItself(snake, near, mark, ++stamp)).toBe(false)
+        }
+      }
+    }
+  })
+  it('packSnakes covers the board with the same snakes for a seed', () => {
+    expect(packSnakes(4, 4, 5, mulberry32(3))).toEqual([[3, 2, 1, 0], [15, 14, 13, 12, 8], [4, 5, 9, 10, 11, 7], [6]])
+  })
+})
+
+describe('generateLevel option limits', () => {
+  it('accepts the smallest boards (2 rows or 2 columns): no size error', () => {
+    expect(() => generateLevel({ ...opts, rows: 2, cols: 4, flows: 1 })).not.toThrow(/2x2/)
+    expect(() => generateLevel({ ...opts, rows: 4, cols: 2, flows: 1 })).not.toThrow(/2x2/)
+  })
+  it('allows exactly 26 flows: the error is about board size, not the flow limit', () => {
+    expect(() => generateLevel({ ...opts, rows: 3, cols: 3, flows: 26 })).toThrow(/too many flows/)
+  })
+  it('throws when no candidate can ever be valid (2×2: one flow always has adjacent ends)', () => {
+    expect(() => generateLevel({ ...opts, rows: 2, cols: 2, flows: 1 })).toThrow(/no level found/)
+  })
+  it('when no candidate meets the quota, the best-scoring candidate within the budget wins', () => {
+    // candidateMs -1: every forced-flow proof times out, so the score is the total detour alone.
+    const grid = (seed: number, candidates: number) =>
+      toGrid(generateLevel({ ...opts, seed, budget: { candidates, candidateMs: -1 } }))
+    // seed 1: the first candidate is already the best one.
+    for (const candidates of [1, 3, 5]) expect(grid(1, candidates)).toEqual(['AAAAA', 'BBBBB', 'CCCDC', 'CDDDC', 'CCCCC'])
+    // seed 4: candidates 2 and 3 each score higher, so a bigger budget picks a different level.
+    expect(grid(4, 1)).toEqual(['AAAAA', 'ABBCC', 'ACBCD', 'ACCCD', 'DDDDD'])
+    expect(grid(4, 4)).toEqual(['AAAAA', 'ADDDA', 'BDCDC', 'BDCDC', 'BDCCC'])
+  })
+  it('a spent time budget stops after the first analyzed candidate', () => {
+    const level = generateLevel({ ...opts, seed: 4, budget: { candidates: 4, candidateMs: -1, totalMs: -1 } })
+    expect(toGrid(level)).toEqual(['AAAAA', 'ABBCC', 'ACBCD', 'ACCCD', 'DDDDD']) // seed 4's first candidate
+  })
+  it('skips trivial candidates while better ones exist (4×4 with 5 flows)', () => {
+    for (let seed = 1; seed <= 6; seed++) {
+      expect(tooTrivial(generateLevel({ ...opts, rows: 4, cols: 4, flows: 5, seed }))).toBe(false)
+    }
+  })
+})
+
 describe('generateLevel (unique mode)', () => {
   it('produces a level with exactly one solution', () => {
     const level = generateLevel(unique)
@@ -88,6 +168,46 @@ describe('shape helpers', () => {
     expect(validSplits([0, 1, 2, 5, 8, 7], near)).toEqual([3])
     expect(validSplits([0, 1, 2, 5, 8], near)).toEqual([])
   })
+  it('validSplits matches a brute-force check on every Hamiltonian path of 3×3 and 3×4', () => {
+    for (const [rows, cols] of [[3, 3], [3, 4]]) {
+      const table = neighborTable(rows, cols)
+      const adjacent = (a: number, b: number) =>
+        Math.abs(Math.floor(a / cols) - Math.floor(b / cols)) + Math.abs((a % cols) - (b % cols)) === 1
+      const expected = (run: number[]) => {
+        const cuts: number[] = []
+        for (let k = 3; k <= run.length - 3; k++) {
+          if (!adjacent(run[0], run[k - 1]) && !adjacent(run[k], run[run.length - 1])) cuts.push(k)
+        }
+        return cuts
+      }
+      let checked = 0
+      const walk = (path: number[]) => {
+        if (path.length === rows * cols) {
+          expect(validSplits(path, table)).toEqual(expected(path))
+          checked++
+          return
+        }
+        const head = path[path.length - 1]
+        for (let d = 0; d < 4; d++) {
+          const n = table[head * 4 + d]
+          if (n >= 0 && !path.includes(n)) walk([...path, n])
+        }
+      }
+      for (let start = 0; start < rows * cols; start++) walk([start])
+      expect(checked).toBeGreaterThan(0)
+    }
+  })
+  it('shapeFlows rejects flows whose ends are adjacent, and keeps valid ones unchanged', () => {
+    const rng = () => 0.5
+    expect(shapeFlows([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 3, 3, 3, rng)).toEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+    expect(shapeFlows([[0, 1, 4, 3]], 3, 3, 1, rng)).toBeNull() // 0 and 3 touch
+    expect(shapeFlows([[0, 1, 2], [3, 4, 5, 8, 7, 6]], 3, 3, 2, rng)).toBeNull() // only the second is bad
+  })
+  it('shapeFlows returns null (no throw) when the runs cannot be split or merged into the flow count', () => {
+    const rng = () => 0.5
+    expect(shapeFlows([[0, 1, 2]], 3, 3, 2, rng)).toBeNull()
+    expect(shapeFlows([[4]], 3, 3, 1, rng)).toBeNull()
+  })
   it('splitRuns turns one run into the requested count, or null when impossible', () => {
     const run = [0, 1, 2, 5, 8, 7]
     expect(splitRuns([run], 2, ctx())).toHaveLength(2)
@@ -103,6 +223,10 @@ describe('shape helpers', () => {
 describe('tooTrivial', () => {
   it('rejects a level where most flows run straight along the border', () => {
     expect(tooTrivial(parseLevel(meta, ['AAAA', 'BBBB']))).toBe(true)
+  })
+  it('counts the right column and bottom row as border', () => {
+    expect(tooTrivial(parseLevel(meta, ['ABC', 'ABC', 'ABC']))).toBe(true) // A left, C right
+    expect(tooTrivial(parseLevel(meta, ['AAA', 'BBB', 'CCC']))).toBe(true) // A top, C bottom
   })
   it('keeps a level with detours inside', () => {
     expect(tooTrivial(parseLevel(meta, ['AAAB', 'CDAB', 'CDAB', 'CCAB']))).toBe(false)

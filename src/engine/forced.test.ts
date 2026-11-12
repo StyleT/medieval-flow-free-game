@@ -43,6 +43,25 @@ describe('analyzeLevel', () => {
     const q = analyzeLevel(level, { exhaustive: true, deadline: Date.now() - 1 })
     expect(q.forced).toEqual([])
   })
+  it('checks the longest detour first and stops as soon as the quota is met', () => {
+    // B wraps around A (detour 2), A is a straight pair (detour 0); both are forced
+    const level = parseLevel(meta, ['BAAB', 'BBBB'])
+    expect(analyzeLevel(level)).toEqual({ forced: ['B'], forcedDetour: 1, totalDetour: 2, met: true })
+  })
+  it('exhaustive checks every flow and returns the forced colors sorted', () => {
+    const level = parseLevel(meta, ['BAAB', 'BBBB'])
+    expect(analyzeLevel(level, { exhaustive: true })).toEqual({ forced: ['A', 'B'], forcedDetour: 1, totalDetour: 2, met: true })
+  })
+  it('totalDetour sums the detours of every flow, forced or not', () => {
+    // A: U-turn with detour 4; B and C: straight, detour 0. Nothing is proved before the deadline.
+    const level = parseLevel(meta, ['AAAC', 'ABBC', 'AAAC'])
+    expect(analyzeLevel(level, { deadline: Date.now() - 1 })).toEqual({ forced: [], forcedDetour: 0, totalDetour: 4, met: false })
+  })
+  it('a forced flow with a detour of exactly 2 counts as a forced detour (boundary)', () => {
+    const level = parseLevel(meta, ['ABBA', 'AAAA'])
+    expect(detourOf(level.solution.A)).toBe(2)
+    expect(analyzeLevel(level, { exhaustive: true })).toMatchObject({ forced: ['A', 'B'], forcedDetour: 1, met: true })
+  })
   it('stops at the quota unless exhaustive', () => {
     const level = parseLevel(meta, ['AAAAAA', 'CCCBBA', 'CBCBDA', 'BBCBDA', 'BCCBDA', 'BBBBDD'])
     const early = analyzeLevel(level)

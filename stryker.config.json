@@ -17,9 +17,9 @@
     "src/audio/settings.ts"
   ],
   "thresholds": {
-    "high": 90,
-    "low": 80,
-    "break": 75
+    "high": 95,
+    "low": 90,
+    "break": 90
   },
   "coverageAnalysis": "perTest",
   "timeoutMS": 2000,

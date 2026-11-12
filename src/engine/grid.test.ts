@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellKey, inBounds, isAdjacent, neighbors, sameCell, straightLine } from './grid.ts'
+import { cellKey, inBounds, isAdjacent, neighborTable, neighbors, sameCell, straightLine } from './grid.ts'
 
 const c = (row: number, col: number) => ({ row, col })
 
@@ -49,5 +49,45 @@ describe('grid', () => {
     expect(straightLine(c(0, 0), c(2, 2))).toBeNull()
     expect(straightLine(c(0, 0), c(1, 2))).toBeNull()
     expect(straightLine(c(1, 1), c(1, 1))).toEqual([])
+  })
+
+  describe('neighborTable (up, right, down, left; -1 for none)', () => {
+    it('a 1x1 board has no neighbours', () => {
+      expect([...neighborTable(1, 1)]).toEqual([-1, -1, -1, -1])
+    })
+    it('a 2x3 board lists every neighbour and -1 at every edge', () => {
+      // 0 1 2
+      // 3 4 5
+      // prettier-ignore
+      expect([...neighborTable(2, 3)]).toEqual([
+        -1, 1, 3, -1,
+        -1, 2, 4, 0,
+        -1, -1, 5, 1,
+        0, 4, -1, -1,
+        1, 5, -1, 3,
+        2, -1, -1, 4,
+      ])
+    })
+    it('a 3x1 column has only up and down neighbours', () => {
+      // prettier-ignore
+      expect([...neighborTable(3, 1)]).toEqual([
+        -1, -1, 1, -1,
+        0, -1, 2, -1,
+        1, -1, -1, -1,
+      ])
+    })
+    it('agrees with neighbors() on a 4x5 board', () => {
+      const table = neighborTable(4, 5)
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 5; col++) {
+          const base = (row * 5 + col) * 4
+          const listed = [...table.slice(base, base + 4)].filter((n) => n >= 0)
+          expect(listed).toEqual(neighbors(4, 5, c(row, col)).map((n) => n.row * 5 + n.col))
+        }
+      }
+    })
+    it('an empty board gives an empty table', () => {
+      expect(neighborTable(0, 3)).toHaveLength(0)
+    })
   })
 })

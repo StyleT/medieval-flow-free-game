@@ -356,3 +356,136 @@ describe('immutability', () => {
     expect(base.paths.A).toEqual([])
   })
 })
+
+describe('mutation-driven edge cases', () => {
+  // 3×3, no blocks. A: top row, B: bottom row. The reference leaves the middle row empty,
+  // which a real level never does, so it exercises the "nothing left to hint" path.
+  const open: Level = {
+    id: 'o',
+    name: 'o',
+    rows: 3,
+    cols: 3,
+    blocked: [],
+    optimalMoves: 2,
+    pairs: [
+      { color: 'A', ends: [c(0, 0), c(0, 2)] },
+      { color: 'B', ends: [c(2, 0), c(2, 2)] },
+    ],
+    solution: { A: [c(0, 0), c(0, 1), c(0, 2)], B: [c(2, 0), c(2, 1), c(2, 2)] },
+  }
+
+  // 3×4. A is a U along the left, bottom and right edges; B is a cup inside it:
+  //   A B B A
+  //   A B B A
+  //   A A A A
+  const cup: Level = {
+    id: 'cup',
+    name: 'cup',
+    rows: 3,
+    cols: 4,
+    blocked: [],
+    optimalMoves: 2,
+    pairs: [
+      { color: 'A', ends: [c(0, 0), c(0, 3)] },
+      { color: 'B', ends: [c(0, 1), c(0, 2)] },
+    ],
+    solution: {
+      A: [c(0, 0), c(1, 0), c(2, 0), c(2, 1), c(2, 2), c(2, 3), c(1, 3), c(0, 3)],
+      B: [c(0, 1), c(1, 1), c(1, 2), c(0, 2)],
+    },
+  }
+  const withPaths = (lvl: Level, paths: GameState['paths']): GameState => ({ ...createGame(lvl), paths })
+  const bShortcut = [c(0, 1), c(0, 2)]
+
+  it('createGame starts with no pending board change', () => {
+    expect(createGame(level).dragChanged).toBe(false)
+    expect(endDrag(createGame(level)).moves).toBe(0)
+  })
+
+  it('occupantAt finds the first cell of a pipe (index 0)', () => {
+    const s = startDrag(createGame(level), c(0, 0))
+    expect(occupantAt(s, c(0, 0))).toBe('A')
+  })
+
+  it('R11 isSolved is false when every flow is connected but cells stay empty', () => {
+    const s = withPaths(open, open.solution)
+    expect(isFlowConnected(s, 'A')).toBe(true)
+    expect(isFlowConnected(s, 'B')).toBe(true)
+    expect(isSolved(s)).toBe(false)
+  })
+
+  it('R11 isSolved is false when the board is covered but only some flows are connected', () => {
+    // A connected along the top; B covers the rest but stops short of its endpoint
+    const s = withPaths(open, {
+      A: [c(0, 0), c(0, 1), c(0, 2)],
+      B: [c(2, 0), c(1, 0), c(1, 1), c(2, 1), c(2, 2), c(1, 2)],
+    })
+    expect(isFlowConnected(s, 'A')).toBe(true)
+    expect(isFlowConnected(s, 'B')).toBe(false)
+    expect(isSolved(s)).toBe(false)
+  })
+
+  it('R6 a drag that only backtracks changes the board and counts as a move', () => {
+    let s = drag(createGame(level), c(0, 0), c(0, 1)) // A: (0,0),(0,1)
+    s = drag(s, c(0, 2), c(1, 2)) // B moves, so A can count again
+    const started = startDrag(s, c(0, 1)) // the head: nothing changed yet
+    expect(started.dragChanged).toBe(false)
+    const back = dragTo(started, c(0, 0))
+    expect(back.paths.A).toEqual([c(0, 0)])
+    expect(back.dragChanged).toBe(true)
+    const ended = endDrag(back)
+    expect(ended.moves).toBe(3)
+    expect(ended.lastMovedColor).toBe('A')
+  })
+
+  it('R9 a connected flow ignores a forward move into an empty, non-endpoint cell', () => {
+    let s = startDrag(createGame(open), c(0, 0))
+    s = dragTo(dragTo(s, c(0, 1)), c(0, 2))
+    expect(isFlowConnected(s, 'A')).toBe(true)
+    const after = dragTo(s, c(1, 2)) // empty and not an endpoint
+    expect(after).toBe(s)
+    expect(after.paths.A).toEqual([c(0, 0), c(0, 1), c(0, 2)])
+  })
+
+  it('R12 all connected but not full: targets the first flow that differs from the reference', () => {
+    const s = withPaths(cup, { A: cup.solution.A, B: bShortcut })
+    expect(isSolved(s)).toBe(false)
+    const hinted = applyHint(s)
+    expect(hinted.paths.B).toEqual(cup.solution.B)
+    expect(hinted.paths.A).toEqual(cup.solution.A)
+    expect(hinted.hintsUsed).toBe(1)
+    expect(isSolved(hinted)).toBe(true)
+  })
+
+  it('R12 all connected but not full: a reversed reference path still counts as matching', () => {
+    const s = withPaths(cup, { A: [...cup.solution.A].reverse(), B: bShortcut })
+    const hinted = applyHint(s)
+    expect(hinted.paths.A).toEqual(s.paths.A)
+    expect(hinted.paths.B).toEqual(cup.solution.B)
+  })
+
+  it('R12 all connected but not full: a same-length route sharing its ends still differs', () => {
+    // same length (8) and same first/last cells as A's reference, different middle
+    const altA = [c(0, 0), c(1, 0), c(1, 1), c(2, 1), c(2, 2), c(1, 2), c(1, 3), c(0, 3)]
+    const s = withPaths(cup, { A: altA, B: bShortcut })
+    expect(isFlowConnected(s, 'A')).toBe(true)
+    expect(isSolved(s)).toBe(false)
+    const hinted = applyHint(s)
+    expect(hinted.paths.A).toEqual(cup.solution.A)
+    expect(hinted.paths.B).toEqual(bShortcut) // not on A's reference, so not cut
+  })
+
+  it('R12 the hint cuts another pipe at its first cell on the revealed path', () => {
+    // A is unconnected; B wanders onto A's reference at (2,1) and keeps only the cells before it
+    const cutter = withPaths(cup, { A: [c(0, 0)], B: [c(0, 1), c(1, 1), c(2, 1)] })
+    const hinted = applyHint(cutter)
+    expect(hinted.paths.A).toEqual(cup.solution.A)
+    expect(hinted.paths.B).toEqual([c(0, 1), c(1, 1)])
+  })
+
+  it('R12 is a no-op when every flow matches the reference but the board is not full', () => {
+    const s = withPaths(open, open.solution)
+    expect(isSolved(s)).toBe(false)
+    expect(applyHint(s)).toBe(s)
+  })
+})

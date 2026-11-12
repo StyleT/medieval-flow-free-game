@@ -7,8 +7,8 @@ All work happens on `main`.
 
 - **Plan first.** Propose a plan and get explicit approval before editing files.
 - **Tests are mandatory** for every change: logic (happy path), boundary (edges/limits) and negative (invalid input, no-ops, failure paths).
-- **Mutation testing is a must.** Stryker runs on `src/engine/**`, `src/audio/soundEvents.ts` and `src/audio/settings.ts`. Mutation testing is parked for now; the new pure UI files (`src/ui/fx/{connectFx,burst}.ts`, `src/ui/map/mapLayout.ts`, `src/ui/scene/sceneLayout.ts`, `src/ui/pixel/pixelScale.ts`) are not in the Stryker scope yet. Surviving mutants are either killed with a new test or listed below as equivalent.
-- **Timeouts.** Wrap every command: `gtimeout 20s <cmd>` (e.g. `gtimeout 20s npm test`). Stryker is the one long job, so it runs in the background under `gtimeout 300s`.
+- **Mutation testing is a must.** Stryker runs on `src/engine/**` (minus `types.ts`, `*.d.ts`, `levels.data.ts`), `src/audio/soundEvents.ts` and `src/audio/settings.ts`, and gates CI: `break` is 90 in `stryker.config.json` (score 97% when it was set; raise it with the score, never below 75). Mutants run only the engine and audio suites (`vitest.stryker.config.ts`, node environment). The pure UI files (`src/ui/fx/{connectFx,burst}.ts`, `src/ui/map/mapLayout.ts`, `src/ui/scene/sceneLayout.ts`, `src/ui/pixel/pixelScale.ts`) are not in the Stryker scope yet. Surviving mutants are either killed with a new test or listed under "Equivalent mutants" below (truly equivalent, accepted heuristic tuning, or static mutants checked by hand).
+- **Timeouts.** Wrap every command: `gtimeout 20s <cmd>` (e.g. `gtimeout 20s npm test`). Stryker is the one long job, so it runs in the background under `gtimeout 900s`.
 - **Background probes.** The dev server and other long-lived processes run in the background, and you check them with short probes (e.g. `gtimeout 5s curl …`).
 - **Readable over clever.** Prefer small, named, pure functions and obvious control flow.
 - **Commits.** One commit per phase (rules → engine → UI → README). Push after tests are green.
@@ -131,16 +131,53 @@ src/App.tsx   screen state machine (profiles / levels / play); props inject leve
 | `gtimeout 20s npm run build` | production build |
 | `npm run art` | rebuild `public/art` from `art/*.px.js` (dev-only, needs pxl; PNGs are committed) |
 | `npm run dev` (background) | Vite dev server on :5173 |
-| `gtimeout 300s npm run test:mutation` (background) | Stryker on the engine (sandbox mode, never `inPlace`; a full run is ~7 min, so it can exceed the cap) |
+| `gtimeout 900s npm run test:mutation` (background) | Stryker, incremental (`reports/stryker-incremental.json`, gitignored): only mutants in changed code or covered by changed tests rerun. Sandbox mode, never `inPlace`. A cold full run is ~11 min locally, an unchanged one ~20 s; add `--incremental false` to force a full run |
 | `npm run gen:levels` (background, several minutes) | regenerate `levels.data.ts`: one process per core, finished levels cached in `scripts/.cache/` (delete it to start over) |
 | `gtimeout 60s npm run bench:gen` | generator timing at 11×11 and 15×15 (runs in a Web Worker in the app, so a few seconds is fine) |
 
 ## CI (GitHub Actions)
 
 - `.github/workflows/ci.yml` runs on every push and on PRs to `main`: `npm ci` → typecheck → test → build on Node from `.nvmrc` (22.18; scripts run `.ts` via Node type stripping). Steps use `timeout`, since `gtimeout` is a macOS name.
-- `.github/workflows/mutation.yml` is manual only (`workflow_dispatch`): Stryker in sandbox mode with a 20 min job cap, and the HTML report is uploaded as the `mutation-report` artifact. Start it with `gh workflow run mutation.yml --ref <branch>`.
+- The `mutation` job in `ci.yml` runs after `check` on the same triggers: incremental Stryker, with `reports/stryker-incremental.json` restored from `actions/cache` (this branch's latest, else `main`'s). It fails below `break` and uploads `reports/mutation/` as the `mutation-report` artifact.
+- `.github/workflows/mutation.yml` is manual only (`workflow_dispatch`): a full, non-incremental Stryker run with a 20 min job cap. Start it with `gh workflow run mutation.yml --ref <branch>`.
 - Keep the workflow steps in sync with the Commands table when scripts change.
 
 ## Equivalent mutants
 
+Line numbers are as of the commit that added each entry. Unless a group says otherwise, behaviour is identical for every input.
+
 - `src/audio/settings.ts` `parsed?.music` → `parsed.music`: for stored `null` the property read throws, and the surrounding `catch` returns the same defaults.
+- `game.ts`
+  - 81 `!inBounds(...)` → `false`: an out-of-bounds cell reads as no colour anyway.
+  - 97 `sameCell(head, target)` → `false`: `straightLine` from a cell to itself is `[]`.
+  - 161 `other.color === pair.color` → `false`: that cell is overwritten by the reference path next.
+  - 162, 163 `>= 0` → `> 0`: index 0 is always the pipe's own endpoint, which a hint never overlaps.
+- `solver.ts`
+  - 5 `BLOCKED = -2` → `2`: any value outside `0…flows-1` and `-1` behaves the same.
+  - 110 `return true` → `false`: `aborted` short-circuits the caller either way.
+  - 119 `return false` → `true`: `DEAD_END` is only reached at the root, where both results end the search.
+  - 129 `depth >= forbid.path.length` variants: past the end `forbid.path[depth]` is `undefined`, which never equals a cell.
+  - 159 `cell >= 0` → `true`, 251 `g >= 0` → `true`: `grid[-1]` is `undefined` and fails the next check.
+  - 189 `moves === 0` → `false`: the following loop finds no move and returns the same.
+  - 196 `!b.connected[f.flow]` → `true`: already covered by the `deviated` check.
+  - 219 `++b.stamp` → `--b.stamp`: stamps stay distinct and non-zero either way.
+  - 224 `i <= heads.length`, 231 `start <= grid.length`: the extra iteration reads `undefined` and sets nothing new.
+  - 243 `n < 0` → `false`: `n` is never negative there.
+- `grid.ts` 48 `row <= rows`: typed-array writes past the end are ignored.
+- `levels.ts`
+  - 11 `rows === 0` → `false`: an empty grid also has `cols === 0`, which throws the same error.
+  - 20 regex anchors removed: every character is tested on its own, one code unit at a time.
+- `sat.ts`
+  - 36 `cell <= cells`, 45 `k <= flows`: the extra variables are never constrained or read.
+  - 37 blocked `continue` → `false`, 40 `fixed !== undefined` → `true`: they only add free or unused variables.
+  - 46, 47 either edge-implication clause removed: implied by "exactly one colour per cell".
+  - 90 `round <= MAX_CUT_ROUNDS`: only differs for a board that resolves on exactly round 501.
+  - 126 `seen.add(start)` removed: the start is re-visited once and adds nothing.
+- `generator.ts`
+  - 101 defensive `catch` in `tryBuildLevel`: unreachable, since shaped flows always parse back.
+  - 109 `fill('?')` → `''` / `Array()`: flows cover the whole board, so every cell is overwritten.
+  - 134 `n >= 0` (alone or with `n !== except`) → `true` / `||`, 143 `cell <= owner.length`, 159 `snake.length > 1` → `true`, 163 `n < 0` → `false`, 183 `n >= 0` → `true`, 269 `n >= 0` → `true`: an out-of-range read is `undefined`, which fails the check that follows.
+  - 40, 44, 60 draw and solver-check caps (`<=`, `true`, `solverChecks--`): another cap still ends the loop, so only the time before the same `no unique level` error changes.
+  - 61 `Date.now() > stopAt`: differs from `>=` only within the same millisecond.
+- Not equivalent, accepted as heuristic tuning (no rule fixes them; they only change which valid level a seed draws, on seeds the golden tests do not reach): `generator.ts` 145 start-cell noise `rng() / 0.9`, 169 tie between equally scored next cells, 297 the order in which runs are tried for a split.
+- Static mutants that the tests kill but Stryker reports as survivors (they run at import, and the vitest runner does not re-import the module for them; checked by hand): `generator.ts` 82 `qualityScore` and 194 `areAdjacent` → `() => undefined`, `levels.ts` 62 `{}` for the `LEVELS` meta.

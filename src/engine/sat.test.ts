@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createProver, detachedLoops } from './sat.ts'
 import { generateLevel } from './generator.ts'
 import { parseLevel } from './levels.ts'
@@ -27,6 +27,21 @@ describe('createProver', () => {
     const level = parseLevel(meta, ['AAA', 'B#B', 'BBB'])
     expect(createProver(level).check('A')).toBe('forced')
   })
+  it('R1 blocked cells carry no pipe: a flow cannot detour through a wall', () => {
+    // with edges into '#' cells usable, A could go (0,0)-#-(0,2) and close the rest over the walls
+    const level = parseLevel(meta, ['A#A', 'A#A', 'AAA'])
+    const prover = createProver(level)
+    expect(prover.check('A')).toBe('forced')
+    expect(prover.hasAnotherFill()).toBe('forced')
+  })
+  it('a different route that needs a detached loop is not an alternative', () => {
+    // ends side by side on a 2x4: the direct edge leaves a 2x3 ring, the short hook a 2x2 ring
+    expect(createProver(adjacentEndsLevel()).check('A')).toBe('forced')
+  })
+  it('gives up with unknown once the loop-cut rounds run out', () => {
+    // a walled-off 6x6 room with no endpoints can only be covered by loops; cutting them never ends
+    expect(createProver(sealedRoomLevel()).check('A')).toBe('unknown')
+  })
   it('throws for an unknown color', () => {
     const level = parseLevel(meta, ['AA'])
     expect(() => createProver(level).check('Z')).toThrow(/unknown color Z/)
@@ -50,10 +65,16 @@ describe('hasAnotherFill', () => {
 })
 
 describe('deadline', () => {
+  afterEach(() => vi.restoreAllMocks())
   it('an expired deadline gives unknown instead of searching', () => {
     const prover = createProver(openLevel(), { deadline: Date.now() - 1 })
     expect(prover.check('A')).toBe('unknown')
     expect(prover.hasAnotherFill()).toBe('unknown')
+  })
+  it('a deadline equal to now still searches (only a passed deadline stops)', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000)
+    expect(createProver(openLevel(), { deadline: 1_000 }).check('A')).toBe('alternative')
+    expect(createProver(openLevel(), { deadline: 999 }).check('A')).toBe('unknown')
   })
   it('a far deadline changes nothing', () => {
     expect(createProver(openLevel(), { deadline: Date.now() + 60_000 }).check('A')).toBe('alternative')
@@ -92,4 +113,31 @@ function openLevel(): Level {
     pairs: [{ color: 'A', ends: [c(0, 0), c(2, 2)] }],
     solution: { A: [c(0, 0), c(0, 1), c(0, 2), c(1, 2), c(1, 1), c(1, 0), c(2, 0), c(2, 1), c(2, 2)] },
   }
+}
+
+const cell = (row: number, col: number) => ({ row, col })
+
+/** One flow whose ends touch, on a 2x4; the reference snakes through every cell. */
+function adjacentEndsLevel(): Level {
+  return {
+    id: 'adjacent',
+    name: 'adjacent',
+    rows: 2,
+    cols: 4,
+    blocked: [],
+    optimalMoves: 1,
+    pairs: [{ color: 'A', ends: [cell(0, 0), cell(1, 0)] }],
+    solution: { A: [cell(0, 0), cell(0, 1), cell(0, 2), cell(0, 3), cell(1, 3), cell(1, 2), cell(1, 1), cell(1, 0)] },
+  }
+}
+
+/** The open 3x3 in columns 0–2, a wall in column 3 and a sealed 6x6 room without endpoints in columns 4–9. */
+function sealedRoomLevel(): Level {
+  const blocked = []
+  for (let row = 0; row < 6; row++) {
+    blocked.push(cell(row, 3))
+    if (row > 2) blocked.push(cell(row, 0), cell(row, 1), cell(row, 2))
+  }
+  const open = openLevel()
+  return { ...open, id: 'sealed', name: 'sealed', rows: 6, cols: 10, blocked }
 }

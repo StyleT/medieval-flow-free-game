@@ -38,4 +38,19 @@ describe('rng', () => {
     expect(shuffle(mulberry32(1), [])).toEqual([])
     expect(shuffle(mulberry32(1), ['x'])).toEqual(['x'])
   })
+  it('mulberry32 is pinned to golden values (committed levels depend on them)', () => {
+    expect(take(42, 3)).toEqual([0.6011037519201636, 0.44829055899754167, 0.8524657934904099])
+    expect(take(0, 1)[0]).toBe(mulberry32(2 ** 32)()) // the seed is taken as an unsigned 32-bit integer
+  })
+  it('shuffle is pinned to a golden permutation for a fixed seed', () => {
+    expect(shuffle(mulberry32(9), [1, 2, 3, 4, 5, 6, 7, 8])).toEqual([8, 7, 4, 3, 5, 1, 6, 2])
+  })
+  it('shuffle draws exactly n - 1 numbers (none for the last, self-swap position)', () => {
+    const rng = mulberry32(5)
+    shuffle(rng, ['a', 'b', 'c'])
+    expect(rng()).toBe(take(5, 3)[2])
+    const single = mulberry32(5)
+    shuffle(single, ['a'])
+    expect(single()).toBe(take(5, 1)[0])
+  })
 })
