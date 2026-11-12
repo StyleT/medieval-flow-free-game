@@ -10,7 +10,7 @@ jobs:
   stryker:
     name: Stryker (sandbox, full run)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 95
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -19,7 +19,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Stryker
-        run: timeout 40m npx stryker run --incremental false
+        run: timeout 90m npx stryker run --incremental false
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v7

@@ -35,7 +35,7 @@ jobs:
     name: Mutation testing (Stryker, incremental)
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 95
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -52,9 +52,9 @@ jobs:
           restore-keys: |
             stryker-${{ github.ref_name }}-
             stryker-main-
-      # A cold run (no cache) re-tests all ~1600 mutants, which can take well over 10 minutes here.
+      # A cold run (no cache) re-tests all ~1600 mutants, which takes about 70 minutes on this runner (about 11 locally).
       - name: Stryker
-        run: timeout 40m npm run test:mutation
+        run: timeout 90m npm run test:mutation
       # Saved even when the score is below `break`, so the next push does not start cold again.
       - name: Save Stryker incremental file
         if: always() && hashFiles('reports/stryker-incremental.json') != ''
