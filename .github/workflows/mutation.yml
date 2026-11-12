@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   stryker:
-    name: Stryker (sandbox)
+    name: Stryker (sandbox, full run)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -19,7 +19,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Stryker
-        run: timeout 18m npx stryker run --reporters clear-text,progress,html
+        run: timeout 18m npx stryker run --incremental false
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v7

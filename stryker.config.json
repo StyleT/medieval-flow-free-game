@@ -4,9 +4,14 @@
   "plugins": [
     "@stryker-mutator/vitest-runner"
   ],
+  "vitest": {
+    "configFile": "vitest.stryker.config.ts"
+  },
   "mutate": [
     "src/engine/**/*.ts",
     "!src/engine/**/*.test.ts",
+    "!src/engine/**/*.d.ts",
+    "!src/engine/types.ts",
     "!src/engine/levels.data.ts",
     "src/audio/soundEvents.ts",
     "src/audio/settings.ts"
@@ -17,9 +22,14 @@
     "break": 75
   },
   "coverageAnalysis": "perTest",
+  "timeoutMS": 2000,
+  "incremental": true,
+  "incrementalFile": "reports/stryker-incremental.json",
   "reporters": [
     "clear-text",
-    "progress"
+    "progress",
+    "html",
+    "json"
   ],
   "tsconfigFile": "tsconfig.stryker-unused.json"
 }

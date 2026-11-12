@@ -30,3 +30,34 @@ jobs:
         run: timeout 120s npm test
       - name: Build
         run: timeout 120s npm run build
+
+  mutation:
+    name: Mutation testing (Stryker, incremental)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Incremental results: this branch's latest, else main's, so only changed code is re-tested.
+      - name: Restore Stryker incremental file
+        uses: actions/cache@v6
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            stryker-${{ github.ref_name }}-
+            stryker-main-
+      - name: Stryker
+        run: timeout 18m npm run test:mutation
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-report
+          path: reports/mutation/
+          if-no-files-found: ignore
