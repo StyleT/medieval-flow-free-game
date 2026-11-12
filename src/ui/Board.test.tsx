@@ -32,14 +32,34 @@ describe('Board art', () => {
     render(<Board state={createGame(walled)} dispatch={noop} />)
     expect(screen.getAllByTestId('block')).toHaveLength(walled.blocked.length)
   })
-  it('draws each endpoint as its gem image', () => {
-    render(<Board state={createGame(open)} dispatch={noop} />)
+  it('draws each endpoint as a rect filled with its gem pattern', () => {
+    const { container } = render(<Board state={createGame(open)} dispatch={noop} />)
     const ends = screen.getAllByTestId('end-A')
     expect(ends).toHaveLength(2)
     for (const e of ends) {
-      expect(e.tagName.toLowerCase()).toBe('image')
-      expect(e.getAttribute('href')).toBe('/art/sprites/gem_A.png')
+      expect(e.tagName.toLowerCase()).toBe('rect')
+      expect(e.getAttribute('fill')).toBe('url(#board-gem-A)')
     }
+    const pattern = container.querySelector('pattern#board-gem-A')
+    expect(pattern?.querySelector('image')?.getAttribute('href')).toBe('/art/sprites/gem_A.png')
+  })
+  it('defines one gem pattern per flow color and nothing more', () => {
+    const { container } = render(<Board state={createGame(open)} dispatch={noop} />)
+    const ids = [...container.querySelectorAll('pattern[id^="board-gem-"]')].map((p) => p.id)
+    expect(ids).toEqual(['board-gem-A', 'board-gem-B'])
+  })
+  it('fills blocked cells from the block pattern, defined only when the level has blocks', () => {
+    const { container, unmount } = render(<Board state={createGame(walled)} dispatch={noop} />)
+    expect(screen.getByTestId('block').getAttribute('fill')).toBe('url(#board-block)')
+    expect(container.querySelector('pattern#board-block image')?.getAttribute('href')).toBe('/art/sprites/block.png')
+    unmount()
+    const other = render(<Board state={createGame(open)} dispatch={noop} />)
+    expect(other.container.querySelector('pattern#board-block')).toBeNull()
+  })
+  it('never draws a board sprite as a bare <image> (WebKit blurs those)', () => {
+    const { container } = render(<Board state={createGame(walled)} dispatch={noop} />)
+    const bare = [...container.querySelectorAll('image')].filter((i) => !i.closest('pattern'))
+    expect(bare).toHaveLength(0)
   })
   it('keeps the pipe testid on the main polyline only, points unchanged', () => {
     const state = withPath(createGame(open), 'A', [{ row: 0, col: 0 }, { row: 1, col: 0 }])

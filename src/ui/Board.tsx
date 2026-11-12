@@ -16,6 +16,21 @@ function gridPath(rows: number, cols: number): string {
   return lines.join('')
 }
 
+export const gemPatternId = (color: string) => `board-gem-${color}`
+
+/**
+ * A sprite drawn as a pattern fill that stretches over the shape using it.
+ * WebKit (every iOS browser) smooths a bare SVG <image> even with image-rendering: pixelated,
+ * but keeps pattern-filled sprites crisp, so board sprites always go through a pattern.
+ */
+function SpritePattern({ id, href }: { id: string; href: string }) {
+  return (
+    <pattern id={id} width={1} height={1} patternUnits="objectBoundingBox" patternContentUnits="objectBoundingBox">
+      <image href={href} width={1} height={1} preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }} />
+    </pattern>
+  )
+}
+
 export function Board({ state, dispatch }: { state: GameState; dispatch: Dispatch<GameAction> }) {
   const { level, paths } = state
   const { rows, cols } = level
@@ -45,19 +60,22 @@ export function Board({ state, dispatch }: { state: GameState; dispatch: Dispatc
         <pattern id="board-floor" width={1} height={1} patternUnits="userSpaceOnUse">
           <image href={artUrl('floor_a')} width={1} height={1} preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }} />
         </pattern>
+        {level.blocked.length > 0 && <SpritePattern id="board-block" href={artUrl('block')} />}
+        {level.pairs.map((pair) => (
+          <SpritePattern key={pair.color} id={gemPatternId(pair.color)} href={artUrl(gemName(pair.color))} />
+        ))}
       </defs>
       <rect width={cols} height={rows} fill="url(#board-floor)" />
       {level.blocked.map((cell) => (
-        <image
+        <rect
           key={`block-${cell.row}-${cell.col}`}
           className="board-block"
           data-testid="block"
-          href={artUrl('block')}
           x={cell.col}
           y={cell.row}
           width={1}
           height={1}
-          preserveAspectRatio="none"
+          fill="url(#board-block)"
         />
       ))}
       {level.pairs.map((pair) =>
@@ -101,16 +119,15 @@ export function Board({ state, dispatch }: { state: GameState; dispatch: Dispatc
       })}
       {level.pairs.flatMap((pair) =>
         pair.ends.map((end) => (
-          <image
+          <rect
             key={`${pair.color}-${end.row}-${end.col}`}
             className="board-gem"
             data-testid={`end-${pair.color}`}
-            href={artUrl(gemName(pair.color))}
             x={end.col + 0.06}
             y={end.row + 0.09}
             width={0.88}
             height={0.8}
-            preserveAspectRatio="xMidYMid meet"
+            fill={`url(#${gemPatternId(pair.color)})`}
           />
         )),
       )}

@@ -87,6 +87,7 @@ src/App.tsx   screen state machine (profiles / levels / play); props inject leve
 - 9-slice panels and buttons are `.px-panel`, `.px-panel-dark`, `.px-btn`, `.px-banner` in `src/styles/pixel-ui.css`. UI font is Pixelify Sans via `@fontsource`.
 - Decorative images are `aria-hidden`. Accessible names and ★ text never depend on art. Animations stop under `prefers-reduced-motion` and pause while the tab is hidden.
 - **Responsive layout.** Frame art is never changed for small screens; layout adapts instead. Bordered `.px-btn`s are `flex: none; white-space: nowrap` so they are never squashed. The sound control (`.sound-toggle`) floats bottom-right on phones with its menu opening upward, and sits top-right from 640px up. `--dock` (5.5rem on phones, 0 from 640px) pads page bottoms and the board's height budget (`--bars-h`) so the floating button never covers content. The level map fits its column: `mapWidthFor()` picks a width between 96 and 160 art px and `LevelMap` re-measures on resize. `.board` subtracts its own frame from the column width, and `html, body` use `overflow-x: clip`. `src/styles/responsive.test.ts` locks these rules.
+- Board sprites (floor, blocks, gems) are `<rect>`s filled from a `<pattern>` holding the `<image>`. WebKit (every iOS browser) smooths a bare SVG `<image>` even with `pixelated`, but keeps pattern fills crisp. `Board.test.tsx` fails on any bare board `<image>`.
 - Pipes stay SVG polylines (outline, main with the `pipe-X` testid, highlight) styled with `crispEdges`.
 
 ## Audio
