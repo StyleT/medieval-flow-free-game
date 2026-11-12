@@ -19,7 +19,7 @@ function Row({ label, on, onChange }: { label: string; on: boolean; onChange: (v
 
 /** Music and Sound effects switches. Floats bottom-right on phones, top-right from the `sm` breakpoint up. */
 export function SoundToggle() {
-  const { settings, setSettings } = useSound()
+  const { settings, setSettings, locked } = useSound()
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
 
@@ -40,13 +40,20 @@ export function SoundToggle() {
   }, [open])
 
   const waves = (Number(settings.music) + Number(settings.sfx)) as 0 | 1 | 2
+  // Browsers play nothing until the first tap; say so, unless the player turned all sound off.
+  const showHint = locked && waves > 0
 
   return (
     <div ref={root} className="sound-toggle">
+      {showHint && !open && (
+        <p role="status" className="px-panel-dark sound-hint">
+          Tap to enable sound
+        </p>
+      )}
       <button
         aria-label="Sound settings"
         aria-expanded={open}
-        className="px-btn sound-toggle-btn flex items-center justify-center"
+        className={`px-btn sound-toggle-btn flex items-center justify-center${showHint ? ' sound-toggle-btn--locked' : ''}`}
         onClick={() => setOpen((o) => !o)}
       >
         <PixelIcon name={waves === 0 ? 'speaker_off' : 'speaker_on'} scale={3} />

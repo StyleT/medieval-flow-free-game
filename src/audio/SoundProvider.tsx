@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { noopPlayer } from './audioEngine.ts'
 import type { AudioPlayer } from './audioEngine.ts'
@@ -11,6 +11,8 @@ type SoundContextValue = {
   settings: AudioSettings
   setSettings: (s: AudioSettings) => void
   play: (id: SfxId) => void
+  /** The browser is still waiting for a tap before any sound can play. */
+  locked: boolean
 }
 
 const SoundContext = createContext<SoundContextValue>({
@@ -18,6 +20,7 @@ const SoundContext = createContext<SoundContextValue>({
   settings: { music: true, sfx: true },
   setSettings: () => {},
   play: () => {},
+  locked: false,
 })
 
 export const useSound = () => useContext(SoundContext)
@@ -48,6 +51,8 @@ export function SoundProvider({
   )
 
   const play = useCallback((id: SfxId) => player.playSfx({ id }), [player])
+  const subscribe = useCallback((listener: () => void) => player.onLockChange(listener), [player])
+  const locked = useSyncExternalStore(subscribe, () => player.isLocked())
 
   useEffect(() => {
     const unlock = () => player.unlock()
@@ -72,6 +77,9 @@ export function SoundProvider({
     }
   }, [player])
 
-  const value = useMemo(() => ({ player, settings, setSettings, play }), [player, settings, setSettings, play])
+  const value = useMemo(
+    () => ({ player, settings, setSettings, play, locked }),
+    [player, settings, setSettings, play, locked],
+  )
   return <SoundContext.Provider value={value}>{children}</SoundContext.Provider>
 }

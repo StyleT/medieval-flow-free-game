@@ -327,6 +327,31 @@ summary:focus-visible {
   width: 14rem;
   max-width: calc(100vw - 1.5rem);
 }
+/* Shown until the browser lets audio play (first tap, or after an iOS interruption). */
+.sound-hint {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0 0.5rem 0 0;
+  padding: 0.25rem 0.5rem;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+.sound-toggle-btn--locked {
+  animation: sound-pulse 1.2s steps(2) infinite;
+}
+@keyframes sound-pulse {
+  50% {
+    filter: brightness(1.35);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sound-toggle-btn--locked {
+    animation: none;
+  }
+}
 @media (min-width: 640px) {
   .sound-toggle {
     bottom: auto;

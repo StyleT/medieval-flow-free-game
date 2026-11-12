@@ -10,6 +10,10 @@ export interface AudioPlayer {
   /** Pauses the music bed while the tab is hidden. */
   setHidden(hidden: boolean): void
   unlock(): void
+  /** True while sound could play but the browser still waits for a tap (never unlocked, or iOS interrupted it). */
+  isLocked(): boolean
+  /** Calls `listener` whenever `isLocked()` may have changed; returns an unsubscribe function. */
+  onLockChange(listener: () => void): () => void
 }
 
 export const noopPlayer: AudioPlayer = {
@@ -19,6 +23,8 @@ export const noopPlayer: AudioPlayer = {
   duckMusic: () => {},
   setHidden: () => {},
   unlock: () => {},
+  isLocked: () => false,
+  onLockChange: () => () => {},
 }
 
 export const THROTTLE_MS: Partial<Record<SfxId, number>> = { tick: 40 }
@@ -45,6 +51,7 @@ export type SourceLike = {
 export type ContextLike = {
   currentTime: number
   state: string
+  onstatechange?: (() => void) | null
   destination: unknown
   resume(): Promise<void>
   createGain(): GainLike
@@ -115,6 +122,10 @@ export function createWebAudioPlayer(deps: WebAudioDeps = browserDeps()): AudioP
   const buffers = new Map<SfxId, unknown>()
   const lastPlayed = new Map<SfxId, number>()
   let duckTimer: ReturnType<typeof setTimeout> | null = null
+  /** No Web Audio at all: there is nothing to unlock, so never ask for a tap. */
+  let unavailable = false
+  const lockListeners = new Set<() => void>()
+  const notifyLock = () => lockListeners.forEach((l) => l())
 
   const setGain = (g: GainLike, value: number, fadeS = 0) => {
     if (!ctx) return
@@ -159,7 +170,10 @@ export function createWebAudioPlayer(deps: WebAudioDeps = browserDeps()): AudioP
     if (!ctx || !needsResume(ctx.state)) return
     void ctx
       .resume()
-      .then(syncMusic)
+      .then(() => {
+        notifyLock()
+        syncMusic()
+      })
       .catch(() => {})
   }
 
@@ -189,15 +203,22 @@ export function createWebAudioPlayer(deps: WebAudioDeps = browserDeps()): AudioP
       try {
         ctx = deps.createContext()
       } catch {
+        unavailable = true
+        notifyLock()
         return
       }
+      // Covers both the first resume and later iOS interruptions.
+      ctx.onstatechange = notifyLock
       sfxBus = ctx.createGain()
       musicBus = ctx.createGain()
       sfxBus.connect(ctx.destination)
       musicBus.connect(ctx.destination)
       sfxBus.gain.value = settings.sfx ? 1 : 0
       musicBus.gain.value = settings.music ? MUSIC_VOLUME : 0
-      void ctx.resume().catch(() => {})
+      void ctx
+        .resume()
+        .then(notifyLock)
+        .catch(() => {})
       loadBuffers()
       syncMusic()
     },
@@ -234,6 +255,14 @@ export function createWebAudioPlayer(deps: WebAudioDeps = browserDeps()): AudioP
       hidden = next
       syncMusic()
       if (!next) resumeIfStalled()
+    },
+    isLocked() {
+      if (unavailable) return false
+      return ctx === null || needsResume(ctx.state)
+    },
+    onLockChange(listener) {
+      lockListeners.add(listener)
+      return () => void lockListeners.delete(listener)
     },
     duckMusic(ms) {
       if (!musicBus || !settings.music) return

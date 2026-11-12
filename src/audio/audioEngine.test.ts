@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createWebAudioPlayer, needsResume, requestPlaybackSession } from './audioEngine.ts'
+import { createWebAudioPlayer, needsResume, noopPlayer, requestPlaybackSession } from './audioEngine.ts'
 import type { ContextLike, GainLike, MediaLike, SourceLike, WebAudioDeps } from './audioEngine.ts'
 
 function harness() {
@@ -283,6 +283,72 @@ describe('recovering from an iOS interruption', () => {
     await Promise.resolve()
     await Promise.resolve()
     expect(h.medias[0].plays).toBe(plays)
+  })
+})
+
+describe('lock state', () => {
+  it('is locked before the first tap and unlocked once the context runs', async () => {
+    const h = harness()
+    const listener = vi.fn()
+    h.player.onLockChange(listener)
+    expect(h.player.isLocked()).toBe(true)
+    h.player.unlock()
+    await vi.waitFor(() => expect(h.player.isLocked()).toBe(false))
+    expect(listener).toHaveBeenCalled()
+  })
+  it('locks again when iOS interrupts the context and reports it', async () => {
+    const h = harness()
+    h.player.unlock()
+    await vi.waitFor(() => expect(h.player.isLocked()).toBe(false))
+    const listener = vi.fn()
+    h.player.onLockChange(listener)
+    h.ctx.state = 'interrupted'
+    h.ctx.onstatechange?.()
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(h.player.isLocked()).toBe(true)
+  })
+  it('stays locked while resume is still pending', () => {
+    const h = harness()
+    vi.mocked(h.ctx.resume).mockReturnValueOnce(new Promise(() => {}))
+    h.player.unlock()
+    expect(h.player.isLocked()).toBe(true)
+  })
+  it('a closed context is not locked (a tap cannot help)', async () => {
+    const h = harness()
+    h.player.unlock()
+    h.ctx.state = 'closed'
+    expect(h.player.isLocked()).toBe(false)
+  })
+  it('without Web Audio it is never locked, and listeners hear about it', () => {
+    const player = createWebAudioPlayer({
+      createContext: () => {
+        throw new Error('no audio')
+      },
+      createMedia: () => {
+        throw new Error('unused')
+      },
+      fetchBuffer: async () => new ArrayBuffer(1),
+      now: () => 0,
+      requestPlaybackSession: () => {},
+    })
+    const listener = vi.fn()
+    player.onLockChange(listener)
+    expect(player.isLocked()).toBe(true)
+    player.unlock()
+    expect(player.isLocked()).toBe(false)
+    expect(listener).toHaveBeenCalledTimes(1)
+  })
+  it('an unsubscribed listener is not called', () => {
+    const h = harness()
+    const listener = vi.fn()
+    h.player.onLockChange(listener)()
+    h.player.unlock()
+    h.ctx.onstatechange?.()
+    expect(listener).not.toHaveBeenCalled()
+  })
+  it('the noop player is never locked', () => {
+    expect(noopPlayer.isLocked()).toBe(false)
+    expect(() => noopPlayer.onLockChange(() => {})()).not.toThrow()
   })
 })
 

@@ -62,6 +62,8 @@ export function fakePlayer(): FakePlayer {
     duckMusic: (ms) => void p.ducks.push(ms),
     setHidden: (h) => void p.hidden.push(h),
     unlock: () => void p.unlocks++,
+    isLocked: () => false,
+    onLockChange: () => () => {},
   }
   return p
 }
