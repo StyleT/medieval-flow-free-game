@@ -138,8 +138,8 @@ src/App.tsx   screen state machine (profiles / levels / play); props inject leve
 ## CI (GitHub Actions)
 
 - `.github/workflows/ci.yml` runs on every push and on PRs to `main`: `npm ci` → typecheck → test → build on Node from `.nvmrc` (22.18; scripts run `.ts` via Node type stripping). Steps use `timeout`, since `gtimeout` is a macOS name.
-- The `mutation` job in `ci.yml` runs after `check` on the same triggers: incremental Stryker, with `reports/stryker-incremental.json` restored from `actions/cache` (this branch's latest, else `main`'s). It fails below `break` and uploads `reports/mutation/` as the `mutation-report` artifact.
-- `.github/workflows/mutation.yml` is manual only (`workflow_dispatch`): a full, non-incremental Stryker run with a 20 min job cap. Start it with `gh workflow run mutation.yml --ref <branch>`.
+- The `mutation` job in `ci.yml` runs after `check` on the same triggers: incremental Stryker, with `reports/stryker-incremental.json` restored with `actions/cache/restore` (this branch's latest, else `main`'s) and saved after every run that produced it, even one below `break`, so a failing push does not leave the next one cold. A cold run is capped at 40 min. The job fails below `break` and uploads `reports/mutation/` as the `mutation-report` artifact.
+- `.github/workflows/mutation.yml` is manual only (`workflow_dispatch`): a full, non-incremental Stryker run with a 45 min job cap. Start it with `gh workflow run mutation.yml --ref <branch>`.
 - Keep the workflow steps in sync with the Commands table when scripts change.
 
 ## Equivalent mutants
