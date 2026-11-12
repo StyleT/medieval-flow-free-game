@@ -65,7 +65,31 @@ export type WebAudioDeps = {
   createMedia: () => MediaLike
   fetchBuffer: (url: string) => Promise<ArrayBuffer>
   now: () => number
+  /** Asks the OS for a playback audio session (iOS: ignore the ringer switch). */
+  requestPlaybackSession: () => void
 }
+
+type NavigatorWithAudioSession = { audioSession?: { type: string } }
+
+/**
+ * iOS gives Web Audio an `ambient` session by default, which the ringer switch mutes.
+ * `navigator.audioSession` (Safari 17+) lets the page ask for `playback` instead.
+ * Older Safari and other browsers have no such API; any failure is ignored.
+ */
+export function requestPlaybackSession(nav: NavigatorWithAudioSession | undefined): void {
+  try {
+    if (nav?.audioSession) nav.audioSession.type = 'playback'
+  } catch {
+    // best effort
+  }
+}
+
+/**
+ * iOS Safari moves the context to the WebKit-only `interrupted` state when the tab is hidden or
+ * the screen locks, and sometimes leaves it `suspended` on return. Anything that is not running
+ * (and not closed for good) needs resume().
+ */
+export const needsResume = (state: string) => state !== 'running' && state !== 'closed'
 
 const browserDeps = (): WebAudioDeps => ({
   createContext: () => {
@@ -75,6 +99,7 @@ const browserDeps = (): WebAudioDeps => ({
   createMedia: () => new Audio() as unknown as MediaLike,
   fetchBuffer: async (url) => (await fetch(url)).arrayBuffer(),
   now: () => performance.now(),
+  requestPlaybackSession: () => requestPlaybackSession(navigator as unknown as NavigatorWithAudioSession),
 })
 
 type Bed = { media: MediaLike; gain: GainLike; track: MusicTrack }
@@ -129,6 +154,15 @@ export function createWebAudioPlayer(deps: WebAudioDeps = browserDeps()): AudioP
     }
   }
 
+  /** Resumes a stalled context, then re-syncs music, which may have failed to play while it was stalled. */
+  const resumeIfStalled = () => {
+    if (!ctx || !needsResume(ctx.state)) return
+    void ctx
+      .resume()
+      .then(syncMusic)
+      .catch(() => {})
+  }
+
   /** Brings the music element in line with `wanted` and the music toggle. */
   const syncMusic = () => {
     if (!ctx) return
@@ -147,9 +181,11 @@ export function createWebAudioPlayer(deps: WebAudioDeps = browserDeps()): AudioP
   return {
     unlock() {
       if (ctx) {
-        if (ctx.state === 'suspended') void ctx.resume().catch(() => {})
+        // Every user gesture is a chance to recover from an iOS interruption.
+        resumeIfStalled()
         return
       }
+      deps.requestPlaybackSession()
       try {
         ctx = deps.createContext()
       } catch {
@@ -197,6 +233,7 @@ export function createWebAudioPlayer(deps: WebAudioDeps = browserDeps()): AudioP
     setHidden(next) {
       hidden = next
       syncMusic()
+      if (!next) resumeIfStalled()
     },
     duckMusic(ms) {
       if (!musicBus || !settings.music) return

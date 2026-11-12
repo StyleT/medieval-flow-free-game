@@ -94,7 +94,8 @@ src/App.tsx   screen state machine (profiles / levels / play); props inject leve
 
 - Assets: `public/sounds/*.mp3` (CC0, Lots of Sounds; see `public/sounds/CREDITS.md`). Missing files fail silently.
 - `createWebAudioPlayer` has two buses (SFX, music). SFX are decoded buffers; music is a looping `<audio>` element, crossfaded over 800 ms between the `menu` and `play` beds. Muting sets the bus gain to 0 and pauses the element. A hidden tab pauses the music.
-- Audio starts on the first `pointerdown` or `keydown` (`unlock`), as iOS requires.
+- Audio starts on the first `pointerdown` or `keydown` (`unlock`), as iOS requires. The first unlock also sets `navigator.audioSession.type = 'playback'` (Safari 17+, guarded), so the iOS ringer switch does not mute the game.
+- iOS puts the context in the WebKit-only `interrupted` state when the tab is hidden or the screen locks. Any state other than `running`/`closed` is resumed on every later `unlock` (each tap) and when the tab becomes visible, and music is re-synced after the resume.
 - `soundEventsFor(prev, next)` returns at most one event. Priority: `solve > hint > connect > cut > start > step/backtrack`. Illegal moves are silent. `tick` is throttled to 40 ms.
 - A capture-phase `click` listener plays `click` for any enabled `<button>`. `data-sfx="none"` skips it and `data-sfx="next"` plays `next`.
 - Settings `{ music, sfx }` live under `flow.audio.v1` (per device, not per profile), behind try/catch. `App` takes an injected `audio` player (default `noopPlayer`; `main.tsx` passes the Web Audio one). Tests use `fakePlayer()`.

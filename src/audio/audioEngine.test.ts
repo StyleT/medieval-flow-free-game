@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createWebAudioPlayer } from './audioEngine.ts'
+import { createWebAudioPlayer, needsResume, requestPlaybackSession } from './audioEngine.ts'
 import type { ContextLike, GainLike, MediaLike, SourceLike, WebAudioDeps } from './audioEngine.ts'
 
 function harness() {
@@ -11,7 +11,9 @@ function harness() {
     currentTime: 0,
     state: 'suspended',
     destination: {},
-    resume: async () => {},
+    resume: vi.fn(async () => {
+      ctx.state = 'running'
+    }),
     createGain: () => {
       const g: GainLike = {
         gain: {
@@ -57,6 +59,7 @@ function harness() {
     },
     fetchBuffer: async () => new ArrayBuffer(1),
     now: () => time,
+    requestPlaybackSession: vi.fn(),
   }
   const player = createWebAudioPlayer(deps)
   const ready = async () => {
@@ -67,7 +70,7 @@ function harness() {
     })
     sources.length = 0
   }
-  return { player, sources, medias, gains, setTime: (t: number) => (time = t), ready }
+  return { player, ctx, deps, sources, medias, gains, setTime: (t: number) => (time = t), ready }
 }
 
 describe('web audio player', () => {
@@ -196,11 +199,125 @@ describe('web audio player', () => {
         throw new Error('x')
       },
       now: () => 0,
+      requestPlaybackSession: () => {},
     })
     expect(() => {
       player.unlock()
       player.playSfx({ id: 'click' })
       player.setMusic('menu')
     }).not.toThrow()
+  })
+
+  it('requests the playback session once, on the first unlock only', () => {
+    const h = harness()
+    expect(h.deps.requestPlaybackSession).not.toHaveBeenCalled()
+    h.player.unlock()
+    h.player.unlock()
+    expect(h.deps.requestPlaybackSession).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('recovering from an iOS interruption', () => {
+  const unlocked = () => {
+    const h = harness()
+    h.player.unlock()
+    h.player.setMusic('menu')
+    vi.mocked(h.ctx.resume).mockClear()
+    return h
+  }
+
+  it('a tap resumes an interrupted context and restarts the music', async () => {
+    const h = unlocked()
+    h.ctx.state = 'interrupted'
+    const plays = h.medias[0].plays
+    h.player.unlock()
+    expect(h.ctx.resume).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(h.medias[0].plays).toBe(plays + 1))
+    expect(h.ctx.state).toBe('running')
+  })
+  it('a tap also resumes a context left suspended', () => {
+    const h = unlocked()
+    h.ctx.state = 'suspended'
+    h.player.unlock()
+    expect(h.ctx.resume).toHaveBeenCalledTimes(1)
+  })
+  it('coming back to the tab resumes an interrupted context', () => {
+    const h = unlocked()
+    h.player.setHidden(true)
+    h.ctx.state = 'interrupted'
+    h.player.setHidden(false)
+    expect(h.ctx.resume).toHaveBeenCalledTimes(1)
+    expect(h.medias[0].paused).toBe(false)
+  })
+  it('does not resume a running context, on tap or on return', () => {
+    const h = unlocked()
+    h.ctx.state = 'running'
+    h.player.unlock()
+    h.player.setHidden(false)
+    expect(h.ctx.resume).not.toHaveBeenCalled()
+  })
+  it('does not resume when the tab is hidden', () => {
+    const h = unlocked()
+    h.ctx.state = 'interrupted'
+    h.player.setHidden(true)
+    expect(h.ctx.resume).not.toHaveBeenCalled()
+  })
+  it('does not resume a closed context', () => {
+    const h = unlocked()
+    h.ctx.state = 'closed'
+    h.player.unlock()
+    h.player.setHidden(false)
+    expect(h.ctx.resume).not.toHaveBeenCalled()
+  })
+  it('returning to the tab before unlock does nothing', () => {
+    const h = harness()
+    h.player.setHidden(false)
+    expect(h.ctx.resume).not.toHaveBeenCalled()
+  })
+  it('a failing resume is swallowed and music stays as it was', async () => {
+    const h = unlocked()
+    h.ctx.state = 'interrupted'
+    vi.mocked(h.ctx.resume).mockRejectedValueOnce(new Error('stuck'))
+    const plays = h.medias[0].plays
+    expect(() => h.player.unlock()).not.toThrow()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(h.medias[0].plays).toBe(plays)
+  })
+})
+
+describe('needsResume', () => {
+  it.each([
+    ['interrupted', true],
+    ['suspended', true],
+    ['running', false],
+    ['closed', false],
+  ])('%s → %s', (state, expected) => {
+    expect(needsResume(state)).toBe(expected)
+  })
+})
+
+describe('requestPlaybackSession', () => {
+  it('sets the iOS audio session to playback', () => {
+    const nav = { audioSession: { type: 'auto' } }
+    requestPlaybackSession(nav)
+    expect(nav.audioSession.type).toBe('playback')
+  })
+  it('does nothing without the API (older Safari, other browsers)', () => {
+    expect(() => requestPlaybackSession({})).not.toThrow()
+    expect(() => requestPlaybackSession(undefined)).not.toThrow()
+  })
+  it('swallows a setter that throws', () => {
+    const nav = {
+      audioSession: {
+        get type() {
+          return 'auto'
+        },
+        set type(_v: string) {
+          throw new Error('not allowed')
+        },
+      },
+    }
+    expect(() => requestPlaybackSession(nav)).not.toThrow()
   })
 })
