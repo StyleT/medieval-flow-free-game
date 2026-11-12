@@ -2,6 +2,10 @@
 
 A Flow Free–style puzzle game. Drag pipes between same-colored dots. Pipes can't cross, and a level is solved when every pair is connected and every cell is filled. Built with TypeScript, React 19, Vite and Vitest. It is mobile-first and works with touch, mouse and pen.
 
+## Demo
+
+[▶ Watch the demo (demo.mov)](demo.mov)
+
 ## Run it
 
 Requires Node 22+.
