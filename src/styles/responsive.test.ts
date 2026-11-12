@@ -33,6 +33,18 @@ describe('responsive layout contract', () => {
     expect(wide).toMatch(/\.sound-toggle \{[^}]*top: max\(0\.75rem, env\(safe-area-inset-top\)\)/)
     expect(wide).toMatch(/\.sound-toggle-menu \{[^}]*top: 100%/)
   })
+  it('the unlock hint is a solid-bordered box in flex flow: no 9-slice, no transform, no absolute offset', () => {
+    const hint = rule(ui, '.sound-hint')
+    expect(hint).toMatch(/border: var\(--px\) solid/)
+    expect(hint).toMatch(/white-space: nowrap/)
+    expect(hint).toMatch(/pointer-events: none/)
+    expect(hint).not.toMatch(/border-image|transform|position: absolute/)
+    expect(rule(ui, '.sound-toggle')).toMatch(/display: flex/)
+  })
+  it('the locked pulse stops under reduced motion', () => {
+    expect(rule(ui, '.sound-toggle-btn--locked')).toMatch(/animation: sound-pulse/)
+    expect(ui).toMatch(/prefers-reduced-motion: reduce\) \{\s*\.sound-toggle-btn--locked \{\s*animation: none/)
+  })
   it('menu cannot be wider than the viewport', () => {
     expect(rule(ui, '.sound-toggle-menu')).toMatch(/max-width: calc\(100vw - 1\.5rem\)/)
   })

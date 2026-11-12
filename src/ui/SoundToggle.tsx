@@ -46,7 +46,7 @@ export function SoundToggle() {
   return (
     <div ref={root} className="sound-toggle">
       {showHint && !open && (
-        <p role="status" className="px-panel-dark sound-hint">
+        <p role="status" className="sound-hint">
           Tap to enable sound
         </p>
       )}
